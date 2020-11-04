@@ -1,0 +1,13 @@
+MODULE main
+VAR x : {u, d, l, r};
+INIT x = u;
+
+DEFINE a := x = d | x = r;
+DEFINE b := x = u | x = r;
+CTLSPEC AG AF a;
+CTLSPEC AF AG a;
+CTLSPEC AF EG a;
+CTLSPEC AX AX AX a;
+CTLSPEC AX AX EX a;
+CTLSPEC EF A[!(a|b) U a&b];
+

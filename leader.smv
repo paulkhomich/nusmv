@@ -1,0 +1,70 @@
+MODULE main
+IVAR turn : 1..4;
+FROZENVAR id1 : 0..3;
+FROZENVAR id2 : 0..3;
+FROZENVAR id3 : 0..3;
+FROZENVAR id4 : 0..3;
+INIT id1 != id2 & id1 != id3 & id1 != id4 & id2 != id3 & id2 != id4 & id3 != id4;
+VAR ch1 : chan(turn = 1 | turn = 2);
+	ch2 : chan(turn = 2 | turn = 3);
+	ch3 : chan(turn = 3 | turn = 4);
+	ch4 : chan(turn = 4 | turn = 1);
+	p0	: proc(id1, ch4, ch1, turn = 1);
+	p1	: proc(id2, ch1, ch2, turn = 2);
+	p2	: proc(id3, ch2, ch3, turn = 3);
+	p3	: proc(id4, ch3, ch4, turn = 4);
+DEFINE sameleader := p0.leader = p1.leader & p1.leader = p2.leader & p2.leader = p3.leader;
+DEFINE maxleader := p0.leader = 3 & p1.leader = 3 & p2.leader = 3 & p3.leader = 3;
+DEFINE allend := p0.state = e & p1.state = e & p2.state = e & p3.state = e;
+DEFINE allempty := ch1.v = -1 & ch2.v = -1 & ch3.v = -1 & ch4.v = -1;
+
+CTLSPEC AG EF (allend & sameleader);
+CTLSPEC AG (allend -> allempty);
+CTLSPEC AG (allend -> maxleader);
+
+MODULE proc(ID, cin, cout, active)
+JUSTICE active;
+VAR i		: 0..3;
+VAR leader	: 0..3;
+VAR state	: { si, r, c1, c2, c3, re, e };
+INIT leader = ID;
+INIT i = ID; 
+INIT state = si;
+TRANS active -> next(cout.v) = case
+	state = c1 & i >= leader & cout.v = -1 : i;
+	state = si & cout.v = -1 : ID;
+	TRUE : cout.v; 
+esac
+TRANS active -> next(cin.v) = case
+	state = r & cin.v != -1 : -1;
+	state = re & leader = ID & cin.v != -1 : -1;
+	TRUE : cin.v;
+esac
+TRANS next(i) = case
+	active & state = r & cin.v != -1 : cin.v;
+	active & state = re & leader = ID & cin.v != -1 : cin.v;
+	TRUE : i;
+esac
+TRANS next(leader) = case
+	active & state = c3 & (i > leader) : i;
+	TRUE : leader;
+esac
+TRANS next(state) = case
+	active & state = si & cout.v = -1 : r;
+	active & state = r & cin.v != -1 : c1;
+	active & state = c1 & i >= leader & cout.v = -1 : c2;
+	active & state = c1 & i < leader : c2;
+	active & state = c2 & i = leader : re;
+	active & state = c2 & i != leader : c3;
+	active & state = c3 : r;
+	active & state = re & leader = ID & cin.v != -1 : e;
+	active & state = re & leader != ID : e;
+	TRUE: state; 
+esac
+
+MODULE chan(active)
+-- Пустой канал: -1
+VAR v : -1..3;
+INIT v = -1;
+-- Если никто не управляет каналом
+TRANS !active -> next(v) = v;
