@@ -1,0 +1,129 @@
+MODULE main
+VAR turn : 0..2;
+VAR row : 0..3; -- Строка
+VAR col : 0..3; -- Столбец
+VAR map : array 0..3 of array 0..3 of boolean;
+INIT	map[0][0] = FALSE &
+		map[0][1] = FALSE &
+		map[0][2] = FALSE &
+		map[0][3] = FALSE &
+		map[1][0] = FALSE &
+		map[1][1] = FALSE &
+		map[1][2] = FALSE &
+		map[1][3] = FALSE &
+		map[2][0] = FALSE &
+		map[2][1] = FALSE &
+		map[2][2] = FALSE &
+		map[2][3] = FALSE &
+		map[3][0] = FALSE &
+		map[3][1] = FALSE &
+		map[3][2] = FALSE &
+		map[3][3] = FALSE;
+INIT turn = 0;
+DEFINE t1 := turn = 0;
+DEFINE t2 := turn = 1;
+DEFINE t3 := turn = 2;
+TRANS t1 -> next(turn) = 1;
+TRANS t2 -> next(turn) = 2;
+TRANS t3 -> next(turn) != 2;
+
+
+DEFINE success :=
+  map[0][0] = TRUE &
+  map[0][1] = TRUE &
+  map[0][2] = TRUE &
+  map[0][3] = TRUE &
+  map[1][0] = TRUE &
+  map[1][1] = TRUE &
+  map[1][2] = TRUE &
+  map[1][3] = TRUE &
+  map[2][0] = TRUE &
+  map[2][1] = TRUE &
+  map[2][2] = TRUE &
+  map[2][3] = TRUE &
+  map[3][0] = TRUE &
+  map[3][1] = TRUE &
+  map[3][2] = TRUE &
+  map[3][3] = TRUE;
+-- Игроки могут зажечь все лампочки
+--CTLSPEC EF success;
+-- Игроки могут зажечь все лампочки так, чтобы правая верхняя лампочка до последнего хода всегда была выключена.
+CTLSPEC E [!map[0][3] U success];
+-- Игроки могут зажечь все лампочки, даже если третий игрок всегда выбирает первого следующим.
+--CTLSPEC EG ((turn = 2) -> EX (success | (turn = 0) & EF success));
+-- Как бы игроки ни выбирали лампочки до текущего момента, они обязательно имеют возможность продолжить выбирать лампочки так, чтобы зажечь их все.
+--CTLSPEC AG EF success;
+
+
+
+
+-- строка
+TRANS next(map)[row][col] = !map[row][col];
+TRANS (col < 3) -> next(map)[row][col + 1] = !map[row][col + 1];
+TRANS (col < 2) -> next(map)[row][col + 2] = (t3) ? !map[row][col + 2] : map[row][col + 2];
+TRANS (col < 1) -> next(map)[row][col + 3] = map[row][col + 3];
+TRANS (col > 0) -> next(map)[row][col - 1] = !map[row][col - 1];
+TRANS (col > 1) -> next(map)[row][col - 2] = (t3) ? !map[row][col - 2] : map[row][col - 2];
+TRANS (col > 2) -> next(map)[row][col - 3] = map[row][col - 3];
+-- столбец
+TRANS (row < 3) -> next(map)[row + 1][col] = (t1 | t2) ? !map[row + 1][col] : map[row + 1][col];
+TRANS (row < 2) -> next(map)[row + 2][col] = map[row + 2][col];
+TRANS (row < 1) -> next(map)[row + 3][col] = map[row + 3][col];
+TRANS (row > 0) -> next(map)[row - 1][col] = (t1 | t2) ? !map[row - 1][col] : map[row - 1][col];
+TRANS (row > 1) -> next(map)[row - 2][col] = map[row - 2][col];
+TRANS (row > 2) -> next(map)[row - 3][col] = map[row - 3][col];
+-- диагональ вправо-вниз
+TRANS (col < 3) & (row < 3) -> next(map)[row + 1][col + 1] = t2 ? !map[row + 1][col + 1] : map[row + 1][col + 1];
+TRANS (col < 2) & (row < 2) -> next(map)[row + 2][col + 2] = map[row + 2][col + 2];
+TRANS (col < 1) & (row < 1) -> next(map)[row + 3][col + 3] = map[row + 3][col + 3];
+-- диагональ влево-вверх
+TRANS (col > 0) & (row > 0) -> next(map)[row - 1][col - 1] = t2 ? !map[row - 1][col - 1] : map[row - 1][col - 1];
+TRANS (col > 1) & (row > 1) -> next(map)[row - 2][col - 2] = map[row - 2][col - 2];
+TRANS (col > 2) & (row > 2) -> next(map)[row - 3][col - 3] = map[row - 3][col - 3];
+-- диагональ вправо-вверх
+TRANS (col < 3) & (row > 0) -> next(map)[row - 1][col + 1] = t2 ? !map[row - 1][col + 1] : map[row - 1][col + 1];
+TRANS (col < 2) & (row > 1) -> next(map)[row - 2][col + 2] = map[row - 2][col + 2];
+TRANS (col < 1) & (row > 2) -> next(map)[row - 3][col + 3] = map[row - 3][col + 3];
+-- диагональ влево-вниз
+TRANS (col > 0) & (row < 3) -> next(map)[row + 1][col - 1] = t2 ? !map[row + 1][col - 1] : map[row + 1][col - 1];
+TRANS (col > 1) & (row < 2) -> next(map)[row + 2][col - 2] = map[row + 2][col - 2];
+TRANS (col > 2) & (row < 1) -> next(map)[row + 3][col - 3] = map[row + 3][col - 3];
+-- клетки "ход конем"
+TRANS (col < 3) & (row > 1) -> next(map)[row - 2][col + 1] = map[row - 2][col + 1];
+TRANS (row > 0) & (col < 2) -> next(map)[row - 1][col + 2] = map[row - 1][col + 2];
+
+TRANS (col > 0) & (row > 1) -> next(map)[row - 2][col - 1] = map[row - 2][col - 1];
+TRANS (row > 0) & (col > 1) -> next(map)[row - 1][col - 2] = map[row - 1][col - 2];
+
+TRANS (col < 3) & (row < 2) -> next(map)[row + 2][col + 1] = map[row + 2][col + 1];
+TRANS (row < 3) & (col < 2) -> next(map)[row + 1][col + 2] = map[row + 1][col + 2];
+
+TRANS (col > 0) & (row < 2) -> next(map)[row + 2][col - 1] = map[row + 2][col - 1];
+TRANS (row < 3) & (col > 1) -> next(map)[row + 1][col - 2] = map[row + 1][col - 2];
+-- осталось два вида клеток, если ход конем это гор1верт2, то остались гор1верт3 и гор2верт3
+-- расписав их будет полное покрытие выбранной row-col точки "квадратом с радиусом 3"
+-- гор1верт3
+TRANS (col < 3) & (row > 2) -> next(map)[row - 3][col + 1] = map[row - 3][col + 1];
+TRANS (row > 0) & (col < 1) -> next(map)[row - 1][col + 3] = map[row - 1][col + 3];
+
+TRANS (col > 0) & (row > 2) -> next(map)[row - 3][col - 1] = map[row - 3][col - 1];
+TRANS (row > 0) & (col > 2) -> next(map)[row - 1][col - 3] = map[row - 1][col - 3];
+
+TRANS (col < 3) & (row < 1) -> next(map)[row + 3][col + 1] = map[row + 3][col + 1];
+TRANS (row < 3) & (col < 1) -> next(map)[row + 1][col + 3] = map[row + 1][col + 3];
+
+TRANS (col > 0) & (row < 1) -> next(map)[row + 3][col - 1] = map[row + 3][col - 1];
+TRANS (row < 3) & (col > 2) -> next(map)[row + 1][col - 3] = map[row + 1][col - 3]; 
+-- гор2верт3
+TRANS (col < 2) & (row > 2) -> next(map)[row - 3][col + 2] = map[row - 3][col + 2];
+TRANS (row > 1) & (col < 1) -> next(map)[row - 2][col + 3] = map[row - 2][col + 3]; 
+
+TRANS (col > 1) & (row > 2) -> next(map)[row - 3][col - 2] = map[row - 3][col - 2];
+TRANS (row > 1) & (col > 2) -> next(map)[row - 2][col - 3] = map[row - 2][col - 3]; 
+
+TRANS (col < 2) & (row < 1) -> next(map)[row + 3][col + 2] = map[row + 3][col + 2];
+TRANS (row < 2) & (col < 1) -> next(map)[row + 2][col + 3] = map[row + 2][col + 3]; 
+
+TRANS (col > 1) & (row < 1) -> next(map)[row + 3][col - 2] = map[row + 3][col - 2];
+TRANS (row < 2) & (col > 2) -> next(map)[row + 2][col - 3] = map[row + 2][col - 3]; 
+
